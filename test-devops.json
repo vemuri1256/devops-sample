@@ -1,17 +1,11 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "COAF CLO - Populator Worker Tier.",
+    "Description": "devops-test",
     "Parameters": {
-        "ChefRole": {
-            "Description": "The chef role that will be run after launch.",
-            "Type": "String",
-            "Default": "coaf_inbound_populator_app_deploy_role",
-            "ConstraintDescription": "This role must exist in the Chef 12 server."
-        },
         "KeyName": {
             "Description": "KeyPair Name for the EC2 Instances.",
             "Type": "String",
-            "Default": "INBOUND-DEV1",
+            "Default": "****",
             "ConstraintDescription": "Must be an existing Key Pair."
         },
         "InstanceType": {
@@ -21,14 +15,14 @@
             "ConstraintDescription" : "Must be an m4.large due to encrypted EBS volumes."
         },
         "Subnets": {
-            "Description": "Subnet for populatorservice Worker tier(COAF-DEV-VPC - General1-us-east-1a,COAF-DEV-VPC - General2-us-east-1b)",
+            "Description": "Subnet for ",
             "Type": "CommaDelimitedList",
-            "Default": "subnet-fa35038d,subnet-ff6f26a6"
+            "Default": "********"
         },
         "SecurityGroup": {
-            "Description": "ID of SecurityGroup (ISRM-SecurityGroups-DEV-DbSG)",
+            "Description": "ID of SecurityGroup",
             "Type": "String",
-            "Default": "sg-0932896e",
+            "Default": "********",
             "ConstraintDescription": "Security Group must already exist."
         },
         "AvailabilityZones": {
@@ -73,7 +67,7 @@
         }
     },
     "Resources": {
-        "PopulatorAppASG": {
+        "devops-testAppASG": {
             "Type": "AWS::AutoScaling::AutoScalingGroup",
             "UpdatePolicy": {
                 "AutoScalingRollingUpdate": {
@@ -87,7 +81,7 @@
                         "Ref": "Subnets"
                 },
                 "LaunchConfigurationName": {
-                    "Ref": "PopulatorAppLaunchConfig"
+                    "Ref": "AppLaunchConfig"
                 },
                 "MaxSize": {
                     "Ref": "MaxAppCount"
@@ -98,54 +92,24 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "inbound-populatorserviceASG-DEV",
+                        "Value": "***********",
                         "PropagateAtLaunch": "true"
                     },
                     {
                         "Key": "Application Name",
-                        "Value": "inbound-populatorservice",
-                        "PropagateAtLaunch": "true"
-                    },
-                    {
-                        "Key": "CMDBEnvironment",
-                        "Value": "ENVC1AUTOC1CLO",
-                        "PropagateAtLaunch": "true"
-                    },
-                    {
-                        "Key": "SNSTopicARN",
-                        "Value": "arn:aws:sns:us-east-1:685250009713:NewTopic-DataControl",
-                        "PropagateAtLaunch": "true"
-                    },
-                    {
-                        "Key": "Application Name",
-                        "Value": "CLO-Populator",
-                        "PropagateAtLaunch": "true"
-                    },
-                    {
-                        "Key": "Owner",
-                        "Value": "okq300:pitchaiahchowdary.vemuri@gmail.com",
-                        "PropagateAtLaunch": "true"
-                    },
-                    {
-                        "Key": "ValueStream",
-                        "Value": "COAF Shared Technologies",
+                        "Value": "**********",
                         "PropagateAtLaunch": "true"
                     },
                     {
                         "Key": "Environment",
                         "Value": "DEV",
                         "PropagateAtLaunch": "true"
-                    },
-                    {
-                        "Key": "Stack",
-                        "Value": "inbound-populatorserviceASG-DEV",
-                        "PropagateAtLaunch": "true"
                     }
                 ]
             },
             "DependsOn": []
         },
-        "PopulatorAppLaunchConfig": {
+        "AppLaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
                 "ImageId": {
@@ -169,9 +133,9 @@
                 {
                     "DeviceName": "/dev/sdg",
                     "Ebs": {
-                        "VolumeSize": "40",
+                        "VolumeSize": "30",
                         "VolumeType": "gp2",
-                        "SnapshotId": "snap-d4a2aabd",
+                        "SnapshotId": "**********",
                         "DeleteOnTermination": "true"
                     }
                 }
@@ -187,10 +151,23 @@
                 "#!/bin/bash -ex \n",
                 "exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1 \n",
                 "export HOSTNAME=$( curl 169.254.169.254/latest/meta-data/local-hostname/ )\n",
-                "cd /opt/prebuild_depot/COFLinux\n",
-                "./ec2-hostname.sh > /tmp/hostname.log 2>&1\n",
-                "cd /opt/prebuild_depot/\n",
-                "./chef-bootstrap-linux.sh developer12 test aws role[coaf_inbound_populator_app_deploy_role]\n"
+
+                "#Install Sinatra for ruby app to work\n",
+                " sudo gem install sinatra \n",
+
+                "#Get ruby code from github \n",
+
+                "if [[ ", { "Ref" : "Env" }, " == \"DEV\" ]] ; then \n",
+                "mkdir -p  /var/apps ; cd /var/apps; git clone https://github.com/sumitnitb/devops-test.git \n",
+                "elif [[ ", { "Ref" : "Env" }, " == \"QA\" ]] ; then \n",
+                "mkdir -p  /var/apps ; cd /var/apps; git clone https://github.com/sumitnitb/devops-test.git \n",
+                "elif [[ ", { "Ref" : "Env" }, " == \"Prod\" ]] ; then \n",
+                "mkdir -p  /var/apps ; cd /var/apps; git clone https://github.com/sumitnitb/devops-test.git \n",
+                "fi \n",
+
+                "# start the Ruby Application",
+                "nohup /usr/bin/ruby /var/apps/devops-test/app.rb -o 0.0.0.0 & \n",
+
                             ]
                         ]
                     }
@@ -219,7 +196,7 @@
                     {
                         "Name": "AutoScalingGroupName",
                         "Value": {
-                            "Ref": "PopulatorAppASG"
+                            "Ref": "AppLaunchConfig"
                         }
                     }
                 ],
@@ -248,7 +225,7 @@
                     {
                         "Name": "AutoScalingGroupName",
                         "Value": {
-                            "Ref": "PopulatorAppASG"
+                            "Ref": "AppLaunchConfig"
                         }
                     }
                 ],
@@ -260,7 +237,7 @@
             "Properties": {
                 "AdjustmentType": "ChangeInCapacity",
                 "AutoScalingGroupName": {
-                    "Ref": "PopulatorAppASG"
+                    "Ref": "devops-testAppASG"
                 },
                 "Cooldown": "60",
                 "ScalingAdjustment": "1"
@@ -271,7 +248,7 @@
             "Properties": {
                 "AdjustmentType": "ChangeInCapacity",
                 "AutoScalingGroupName": {
-                    "Ref": "PopulatorAppASG"
+                    "Ref": "devops-testAppASG"
                 },
                 "Cooldown": "60",
                 "ScalingAdjustment": "-1"
